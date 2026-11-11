@@ -62,43 +62,70 @@ class SharedStats {
     static final java.util.concurrent.atomic.AtomicInteger busyWaitPolls = new java.util.concurrent.atomic.AtomicInteger(0);
 
     // TODO Feature 2: declare the lock(s) protecting the three shared variables above here.
+
+private static final ReentrantLock contextSwitchLock = new ReentrantLock();
+private static final ReentrantLock completedProcessLock = new ReentrantLock();
+private static final ReentrantLock serviceTimeLock = new ReentrantLock();
     // Think about it: ONE lock for the three variables, or ONE lock PER variable? (you must justify it in MY_WORK.md)
 
-    public static void incrementContextSwitch() {
-        // TODO Feature 2: protect this critical section
-        int tmp = contextSwitchCount;       // 1) read
-        RaceWindow.pause();                 //    <- another thread can read the SAME value here
-        contextSwitchCount = tmp + 1;       // 2) write  (one increment is lost if someone else did the same)
-    }
+ 
 
-    public static void incrementCompletedProcess() {
-        // TODO Feature 2: protect this critical section
+public static void incrementContextSwitch() {
+    contextSwitchLock.lock();
+    try {
+        int tmp = contextSwitchCount;
+        RaceWindow.pause();
+        contextSwitchCount = tmp + 1;
+    } finally {
+        contextSwitchLock.unlock();
+    }
+}
+public static void incrementCompletedProcess() {
+    completedProcessLock.lock();
+    try {
         int tmp = completedProcessCount;
         RaceWindow.pause();
         completedProcessCount = tmp + 1;
+    } finally {
+        completedProcessLock.unlock();
     }
+}
 
-    public static void addServiceTime(int ms) {
-        // TODO Feature 2: protect this critical section
+   public static void addServiceTime(int ms) {
+    serviceTimeLock.lock();
+    try {
         long tmp = totalServiceTime;
         RaceWindow.pause();
         totalServiceTime = tmp + ms;
+    } finally {
+        serviceTimeLock.unlock();
     }
-
+}
     // Readers must also be protected (a read in the middle of an update is not safe either)
-    public static int getCompletedProcessCount() {
-        // TODO Feature 2: protect this read
+   public static int getCompletedProcessCount() {
+    completedProcessLock.lock();
+    try {
         return completedProcessCount;
+    } finally {
+        completedProcessLock.unlock();
     }
+}
 
-    public static int getContextSwitchCount() {
-        // TODO Feature 2: protect this read
+   public static int getContextSwitchCount() {
+    contextSwitchLock.lock();
+    try {
         return contextSwitchCount;
+    } finally {
+        contextSwitchLock.unlock();
     }
+}
 
     public static long getTotalServiceTime() {
-        // TODO Feature 2: protect this read
+    serviceTimeLock.lock();
+    try {
         return totalServiceTime;
+    } finally {
+        serviceTimeLock.unlock();
     }
 }
 
